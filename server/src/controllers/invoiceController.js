@@ -1,16 +1,18 @@
 import { extractTextFromPdf } from "../services/pdfService.js";
 import { extractInvoiceData } from "../services/invoiceExtractionService.js";
 import { validateInvoice } from "../services/invoiceValidationService.js";
+import { appendInvoice } from "../services/googleSheetsService.js";
 
 /**
- * Invoice controller — Phase 5.
+ * Invoice controller — Phase 6.
  *
- * Coordinates the full pipeline:
+ * Coordinates the full end-to-end pipeline:
  * 1. Receives and validates uploaded PDF file.
  * 2. Extracts raw text via pdfService.
  * 3. Extracts structured data via invoiceExtractionService (LLM).
  * 4. Validates structured data via invoiceValidationService (Zod + Business Rules).
- * 5. Returns validated, trusted invoice JSON.
+ * 5. Appends validated invoice to Google Sheets ERP via googleSheetsService.
+ * 6. Returns structured invoice and sync status.
  */
 
 /**
@@ -69,11 +71,37 @@ export async function processInvoice(req, res, next) {
     const validatedInvoice = validateInvoice(rawInvoice);
     console.log("[INVOICE] Invoice validation completed");
 
-    // 7. Return validated invoice response
+    // 7. Send validated invoice to Google Sheets ERP
+    console.log("[INVOICE] Google Sheets sync started");
+    let syncResult;
+    try {
+      syncResult = await appendInvoice(validatedInvoice);
+      console.log("[INVOICE] Google Sheets sync completed successfully");
+    } catch (syncErr) {
+      console.error(`[INVOICE SYNC FAILED] ${syncErr.message}`);
+      return res.status(syncErr.statusCode || 502).json({
+        success: false,
+        message:
+          syncErr.message ||
+          "Invoice was validated but could not be synchronized with Google Sheets",
+        invoice: validatedInvoice,
+        sync: {
+          status: "failed",
+          destination: "Google Sheets",
+        },
+      });
+    }
+
+    // 8. Return complete success response with validated invoice and sync status
     res.status(200).json({
       success: true,
-      message: "Invoice processed and validated successfully",
+      message: "Invoice processed and synced successfully",
       invoice: validatedInvoice,
+      sync: {
+        status: "success",
+        destination: "Google Sheets",
+        processedAt: syncResult.processedAt,
+      },
     });
   } catch (err) {
     next(err);

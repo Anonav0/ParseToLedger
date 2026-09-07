@@ -59,7 +59,7 @@ function InvoiceUploader() {
     }
 
     setUploadState("uploading");
-    setLoadingStage("Analyzing and validating invoice…");
+    setLoadingStage("Extracting, analyzing, and syncing with Google Sheets…");
     setError("");
     setValidationErrors([]);
     setResult(null);
@@ -95,7 +95,7 @@ function InvoiceUploader() {
 
   return (
     <div className="uploader-card">
-      <h2 className="uploader-title">Process Invoice</h2>
+      <h2 className="uploader-title">Process & Sync Invoice</h2>
 
       {/* File picker */}
       <div className="file-input-area">
@@ -127,13 +127,17 @@ function InvoiceUploader() {
         >
           {uploadState === "uploading"
             ? loadingStage || "Processing invoice…"
-            : "Upload & Process with AI"}
+            : "Upload & Sync to Google Sheets"}
         </button>
       )}
 
       {/* Structured Invoice Result */}
       {uploadState === "success" && result?.invoice && (
-        <InvoiceResult invoice={result.invoice} onReset={handleReset} />
+        <InvoiceResult
+          invoice={result.invoice}
+          sync={result.sync}
+          onReset={handleReset}
+        />
       )}
 
       {/* Fallback Raw Text Result (if invoice object not present) */}
@@ -145,7 +149,7 @@ function InvoiceUploader() {
             <pre className="extracted-text-content">{result.text}</pre>
           </div>
           <button className="upload-btn secondary" onClick={handleReset}>
-            Upload Another Invoice
+            Process Another Invoice
           </button>
         </div>
       )}

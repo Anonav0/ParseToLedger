@@ -17,7 +17,7 @@ export async function checkHealth() {
 /**
  * Upload a PDF invoice for processing.
  * @param {File} file - The PDF file to upload.
- * @returns {Promise<{success: boolean, message: string, invoice?: object, errors?: Array}>}
+ * @returns {Promise<{success: boolean, message: string, invoice?: object, sync?: object, errors?: Array}>}
  */
 export async function uploadInvoice(file) {
   const formData = new FormData();
@@ -32,6 +32,12 @@ export async function uploadInvoice(file) {
   const data = await response.json();
 
   if (!response.ok || !data.success) {
+    // If the server returned a validated invoice despite sync failure, return it
+    // so the UI can display the invoice along with the sync failure notice.
+    if (data.invoice && data.sync) {
+      return data;
+    }
+
     const error = new Error(
       data.message || "Unable to process the invoice. Please try again.",
     );

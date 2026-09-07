@@ -12,7 +12,20 @@ function formatAmount(val, currency = "") {
   return currency ? `${currency} ${formatted}` : formatted;
 }
 
-function InvoiceResult({ invoice, onReset }) {
+/**
+ * Formats an ISO date-time string into a human-readable local timestamp.
+ */
+function formatTimestamp(isoStr) {
+  if (!isoStr) return "";
+  try {
+    const d = new Date(isoStr);
+    return d.toLocaleString();
+  } catch {
+    return isoStr;
+  }
+}
+
+function InvoiceResult({ invoice, sync, onReset }) {
   if (!invoice) return null;
 
   const {
@@ -26,15 +39,48 @@ function InvoiceResult({ invoice, onReset }) {
     totalAmount,
   } = invoice;
 
+  const isSynced = sync?.status === "success";
+  const isSyncFailed = sync?.status === "failed";
+
   return (
     <div className="invoice-result-container">
+      {/* Workflow Status Badges */}
       <div className="result-header-banner">
         <div className="badges-group">
-          <span className="badge-ai-extracted">AI Extracted</span>
+          <span className="badge-ai-extracted">✓ AI Extracted</span>
           <span className="badge-validated">✓ Validated</span>
+          {isSynced && (
+            <span className="badge-synced">✓ Synced to Google Sheets</span>
+          )}
+          {isSyncFailed && (
+            <span className="badge-sync-failed">
+              ⚠ Google Sheets Sync Failed
+            </span>
+          )}
         </div>
-        <span className="sync-note">Not yet synced to accounting</span>
       </div>
+
+      {/* Sync Status Banner */}
+      {isSynced && (
+        <div className="sync-status-banner success">
+          <span className="sync-icon">📊</span>
+          <span className="sync-text">
+            Appended to <strong>{sync.destination || "Google Sheets"}</strong>
+            {sync.processedAt && ` at ${formatTimestamp(sync.processedAt)}`}
+          </span>
+        </div>
+      )}
+
+      {isSyncFailed && (
+        <div className="sync-status-banner warning">
+          <span className="sync-icon">⚠️</span>
+          <span className="sync-text">
+            Invoice was validated successfully, but could not be synchronized
+            with <strong>Google Sheets</strong>. Validated data is preserved
+            below.
+          </span>
+        </div>
+      )}
 
       {/* Invoice Overview */}
       <div className="invoice-metadata-grid">
@@ -119,7 +165,7 @@ function InvoiceResult({ invoice, onReset }) {
 
       {/* Reset / New Upload */}
       <button className="upload-btn secondary" onClick={onReset}>
-        Upload Another Invoice
+        Process Another Invoice
       </button>
     </div>
   );
