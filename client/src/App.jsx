@@ -80,7 +80,7 @@ function App() {
       </main>
 
       <footer className="app-footer">
-        <p>Phase 4 — AI Invoice Extraction</p>
+        <p>Phase 5 — Invoice Validation</p>
       </footer>
     </div>
   );

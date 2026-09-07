@@ -7,11 +7,14 @@ import env from "../config/env.js";
  * Catches all errors passed via next(err) and returns a consistent
  * JSON response. Stack traces are never exposed to the client.
  *
- * Includes special handling for Multer upload errors.
+ * Includes handling for:
+ * - Multer upload errors
+ * - Structured validation errors (err.errors)
+ * - General HTTP errors
  */
 // eslint-disable-next-line no-unused-vars
 export function errorHandler(err, req, res, next) {
-  // Handle Multer-specific errors
+  // 1. Handle Multer-specific errors
   if (err instanceof multer.MulterError) {
     let message = "File upload error";
     let statusCode = 400;
@@ -37,16 +40,26 @@ export function errorHandler(err, req, res, next) {
   const statusCode = err.statusCode || 500;
   const message = err.message || "Something went wrong";
 
-  // Log the full error on the server for debugging
+  // Log the error on the server for debugging
   console.error(`[ERROR] ${req.method} ${req.originalUrl} — ${message}`);
-  if (process.env.NODE_ENV !== "production") {
+  if (err.errors && Array.isArray(err.errors)) {
+    console.error(`[ERROR DETAILS] ${JSON.stringify(err.errors, null, 2)}`);
+  }
+  if (process.env.NODE_ENV !== "production" && !err.errors) {
     console.error(err.stack);
   }
 
-  res.status(statusCode).json({
+  const responseBody = {
     success: false,
     message,
-  });
+  };
+
+  // Attach safe, structured field-level errors if present
+  if (Array.isArray(err.errors) && err.errors.length > 0) {
+    responseBody.errors = err.errors;
+  }
+
+  res.status(statusCode).json(responseBody);
 }
 
 /**

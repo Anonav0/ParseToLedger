@@ -144,6 +144,48 @@
   color: #b91c1c;
   margin: 0;
   line-height: 1.5;
+  font-weight: 500;
+}
+
+.validation-errors-section {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #fecaca;
+}
+
+.validation-errors-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #991b1b;
+  margin-bottom: 0.4rem;
+}
+
+.validation-errors-list {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.validation-error-item {
+  font-size: 0.8rem;
+  color: #7f1d1d;
+  line-height: 1.4;
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+}
+
+.validation-field-name {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.75rem;
+  background: #fee2e2;
+  color: #991b1b;
+  padding: 0.1rem 0.3rem;
+  border-radius: 4px;
+  flex-shrink: 0;
 }
 
 /* ------------------------------------------------------------------ */
@@ -163,6 +205,12 @@
   margin-bottom: 1rem;
 }
 
+.badges-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .badge-ai-extracted {
   display: inline-flex;
   align-items: center;
@@ -172,6 +220,21 @@
   background: #eff6ff;
   color: #1d4ed8;
   border: 1px solid #bfdbfe;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.025em;
+  text-transform: uppercase;
+}
+
+.badge-validated {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 9999px;
+  background: #f0fdf4;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
   font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: 0.025em;

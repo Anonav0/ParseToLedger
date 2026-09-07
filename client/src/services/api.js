@@ -17,7 +17,7 @@ export async function checkHealth() {
 /**
  * Upload a PDF invoice for processing.
  * @param {File} file - The PDF file to upload.
- * @returns {Promise<{success: boolean, message: string, file: object}>}
+ * @returns {Promise<{success: boolean, message: string, invoice?: object, errors?: Array}>}
  */
 export async function uploadInvoice(file) {
   const formData = new FormData();
@@ -32,9 +32,13 @@ export async function uploadInvoice(file) {
   const data = await response.json();
 
   if (!response.ok || !data.success) {
-    throw new Error(
-      data.message || "Unable to upload the invoice. Please try again.",
+    const error = new Error(
+      data.message || "Unable to process the invoice. Please try again.",
     );
+    if (Array.isArray(data.errors) && data.errors.length > 0) {
+      error.errors = data.errors;
+    }
+    throw error;
   }
 
   return data;

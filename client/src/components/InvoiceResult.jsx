@@ -29,7 +29,10 @@ function InvoiceResult({ invoice, onReset }) {
   return (
     <div className="invoice-result-container">
       <div className="result-header-banner">
-        <span className="badge-ai-extracted">AI Extracted</span>
+        <div className="badges-group">
+          <span className="badge-ai-extracted">AI Extracted</span>
+          <span className="badge-validated">✓ Validated</span>
+        </div>
         <span className="sync-note">Not yet synced to accounting</span>
       </div>
 

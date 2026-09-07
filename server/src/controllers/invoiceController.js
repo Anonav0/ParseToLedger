@@ -1,14 +1,16 @@
 import { extractTextFromPdf } from "../services/pdfService.js";
 import { extractInvoiceData } from "../services/invoiceExtractionService.js";
+import { validateInvoice } from "../services/invoiceValidationService.js";
 
 /**
- * Invoice controller — Phase 4.
+ * Invoice controller — Phase 5.
  *
  * Coordinates the full pipeline:
  * 1. Receives and validates uploaded PDF file.
  * 2. Extracts raw text via pdfService.
- * 3. Extracts structured accounting data via invoiceExtractionService (LLM).
- * 4. Returns structured invoice JSON.
+ * 3. Extracts structured data via invoiceExtractionService (LLM).
+ * 4. Validates structured data via invoiceValidationService (Zod + Business Rules).
+ * 5. Returns validated, trusted invoice JSON.
  */
 
 /**
@@ -59,14 +61,19 @@ export async function processInvoice(req, res, next) {
 
     // 5. Send raw text to LLM for structured invoice extraction
     console.log("[INVOICE] LLM extraction started");
-    const invoice = await extractInvoiceData(extractedText);
+    const rawInvoice = await extractInvoiceData(extractedText);
     console.log("[INVOICE] LLM extraction completed");
 
-    // 6. Return structured invoice response
+    // 6. Validate AI output using Zod schema and business logic
+    console.log("[INVOICE] Invoice validation started");
+    const validatedInvoice = validateInvoice(rawInvoice);
+    console.log("[INVOICE] Invoice validation completed");
+
+    // 7. Return validated invoice response
     res.status(200).json({
       success: true,
-      message: "Invoice processed successfully",
-      invoice,
+      message: "Invoice processed and validated successfully",
+      invoice: validatedInvoice,
     });
   } catch (err) {
     next(err);

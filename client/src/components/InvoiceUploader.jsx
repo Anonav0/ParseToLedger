@@ -21,6 +21,7 @@ function InvoiceUploader() {
   const [loadingStage, setLoadingStage] = useState("");
   const [result, setResult] = useState(null);
   const [error, setError] = useState("");
+  const [validationErrors, setValidationErrors] = useState([]);
   const fileInputRef = useRef(null);
 
   /**
@@ -45,6 +46,7 @@ function InvoiceUploader() {
     setUploadState("idle");
     setResult(null);
     setError("");
+    setValidationErrors([]);
   }
 
   async function handleUpload() {
@@ -57,8 +59,9 @@ function InvoiceUploader() {
     }
 
     setUploadState("uploading");
-    setLoadingStage("Analyzing invoice with AI…");
+    setLoadingStage("Analyzing and validating invoice…");
     setError("");
+    setValidationErrors([]);
     setResult(null);
 
     try {
@@ -69,6 +72,9 @@ function InvoiceUploader() {
       setError(
         err.message || "Unable to process the invoice. Please try again.",
       );
+      if (Array.isArray(err.errors) && err.errors.length > 0) {
+        setValidationErrors(err.errors);
+      }
       setUploadState("error");
     } finally {
       setLoadingStage("");
@@ -81,6 +87,7 @@ function InvoiceUploader() {
     setLoadingStage("");
     setResult(null);
     setError("");
+    setValidationErrors([]);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -147,6 +154,23 @@ function InvoiceUploader() {
       {uploadState === "error" && error && (
         <div className="upload-result error">
           <p className="error-message">{error}</p>
+
+          {validationErrors.length > 0 && (
+            <div className="validation-errors-section">
+              <p className="validation-errors-title">Validation Details:</p>
+              <ul className="validation-errors-list">
+                {validationErrors.map((item, idx) => (
+                  <li key={idx} className="validation-error-item">
+                    <strong className="validation-field-name">
+                      {item.field}:
+                    </strong>{" "}
+                    <span>{item.message}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           <button className="upload-btn secondary" onClick={handleReset}>
             Try Again
           </button>
