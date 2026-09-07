@@ -1,3 +1,7 @@
+
+<img width="856" height="918" alt="Screenshot from 2026-09-08 00-24-52" src="https://github.com/user-attachments/assets/2877401c-e3ec-4718-b5e4-b2844b0882a3" />
+
+
 # ParseToLedger — Invoice-to-Accounting Sync
 
 An AI-powered, full-stack invoice processing and accounting automation engine. **ParseToLedger** enables finance teams and businesses to upload PDF invoices, automatically extract structured accounting data using Google Gemini, rigorously validate line-item math and schemas using Zod, and synchronize verified ledgers into Google Sheets in real time.
