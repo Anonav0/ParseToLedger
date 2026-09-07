@@ -80,7 +80,7 @@ function App() {
       </main>
 
       <footer className="app-footer">
-        <p>Phase 6 — Google Sheets ERP Sync</p>
+        <p>Phase 7 — End-to-End Integration</p>
       </footer>
     </div>
   );

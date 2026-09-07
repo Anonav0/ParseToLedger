@@ -44,19 +44,21 @@ function InvoiceResult({ invoice, sync, onReset }) {
 
   return (
     <div className="invoice-result-container">
-      {/* Workflow Status Badges */}
-      <div className="result-header-banner">
-        <div className="badges-group">
-          <span className="badge-ai-extracted">✓ AI Extracted</span>
-          <span className="badge-validated">✓ Validated</span>
-          {isSynced && (
-            <span className="badge-synced">✓ Synced to Google Sheets</span>
-          )}
-          {isSyncFailed && (
-            <span className="badge-sync-failed">
-              ⚠ Google Sheets Sync Failed
-            </span>
-          )}
+      {/* Workflow Status Checklist */}
+      <div className="status-checklist">
+        <div className="checklist-item done">
+          <span className="checklist-icon">✓</span>
+          <span className="checklist-text">Invoice processed</span>
+        </div>
+        <div className="checklist-item done">
+          <span className="checklist-icon">✓</span>
+          <span className="checklist-text">Invoice validated</span>
+        </div>
+        <div className={`checklist-item ${isSynced ? "done" : "failed"}`}>
+          <span className="checklist-icon">{isSynced ? "✓" : "⚠"}</span>
+          <span className="checklist-text">
+            {isSynced ? "Synced to Google Sheets" : "Google Sheets Sync Failed"}
+          </span>
         </div>
       </div>
 

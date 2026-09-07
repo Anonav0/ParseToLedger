@@ -22,18 +22,22 @@ export function errorHandler(err, req, res, next) {
     switch (err.code) {
       case "LIMIT_FILE_SIZE":
         message = `File size exceeds the ${env.MAX_FILE_SIZE_MB} MB limit`;
+        statusCode = 413;
         break;
       case "LIMIT_UNEXPECTED_FILE":
         message = "Unexpected file field";
+        statusCode = 400;
         break;
       default:
         message = `Upload error: ${err.message}`;
+        statusCode = 400;
     }
 
     console.error(`[UPLOAD ERROR] ${err.code} — ${message}`);
     return res.status(statusCode).json({
       success: false,
       message,
+      errors: [],
     });
   }
 
