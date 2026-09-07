@@ -26,26 +26,81 @@ const env = {
 };
 
 /**
- * Validate that required environment variables are present.
+ * Validate that required environment variables are properly configured.
+ * Enforces fail-fast in production and logs safe operational status in development.
+ * Never prints secret values to stdout or logs.
  */
 export function validateEnv() {
-  if (!env.LLM_API_KEY) {
-    console.warn(
-      "[CONFIG WARNING] LLM_API_KEY is not configured in server/.env. " +
-        "AI invoice extraction will fail with a configuration error until set.",
-    );
+  const isProduction = env.NODE_ENV === "production";
+  const missingCritical = [];
+
+  // Core Server Configuration
+  if (!env.PORT || isNaN(env.PORT) || env.PORT <= 0) {
+    missingCritical.push("PORT (must be a positive integer)");
+  }
+  if (!env.CLIENT_URL) {
+    missingCritical.push("CLIENT_URL (frontend origin for CORS)");
   }
 
-  if (
-    !env.GOOGLE_CLIENT_EMAIL ||
-    !env.GOOGLE_PRIVATE_KEY ||
-    !env.GOOGLE_SPREADSHEET_ID
-  ) {
-    console.warn(
-      "[CONFIG WARNING] Google Sheets credentials are not fully configured in server/.env. " +
-        "Google Sheets sync will fail with a configuration error until set.",
-    );
+  // LLM Configuration
+  const isLlmConfigured = Boolean(env.LLM_API_KEY);
+  if (!isLlmConfigured) {
+    if (isProduction) {
+      missingCritical.push("LLM_API_KEY (required for AI invoice extraction)");
+    } else {
+      console.warn(
+        "[CONFIG WARNING] LLM_API_KEY is not configured in server/.env. " +
+          "AI invoice extraction will return an error until set.",
+      );
+    }
   }
+
+  // Google Sheets ERP Configuration
+  const missingSheets = [];
+  if (!env.GOOGLE_CLIENT_EMAIL) missingSheets.push("GOOGLE_CLIENT_EMAIL");
+  if (!env.GOOGLE_PRIVATE_KEY) missingSheets.push("GOOGLE_PRIVATE_KEY");
+  if (!env.GOOGLE_SPREADSHEET_ID) missingSheets.push("GOOGLE_SPREADSHEET_ID");
+
+  const isSheetsConfigured = missingSheets.length === 0;
+  if (!isSheetsConfigured) {
+    if (isProduction) {
+      missingCritical.push(...missingSheets);
+    } else {
+      console.warn(
+        `[CONFIG WARNING] Google Sheets integration is missing: ${missingSheets.join(
+          ", ",
+        )}. Google Sheets sync will return an error until configured.`,
+      );
+    }
+  }
+
+  // Fail fast in production if required variables are missing
+  if (missingCritical.length > 0) {
+    const errorMsg = `[FATAL] Startup failed due to missing required environment configuration: ${missingCritical.join(
+      ", ",
+    )}`;
+    console.error(errorMsg);
+    throw new Error(errorMsg);
+  }
+
+  // Operational status report (zero secrets logged)
+  console.log(
+    `[CONFIG] Environment: ${env.NODE_ENV} | Port: ${env.PORT} | CORS Origin: ${env.CLIENT_URL}`,
+  );
+  console.log(
+    `[CONFIG] LLM Service: ${
+      isLlmConfigured
+        ? `Configured (model: ${env.LLM_MODEL})`
+        : "Disabled / Not Configured"
+    }`,
+  );
+  console.log(
+    `[CONFIG] Google Sheets: ${
+      isSheetsConfigured
+        ? `Configured (sheet: '${env.GOOGLE_SHEET_NAME}')`
+        : "Disabled / Not Configured"
+    }`,
+  );
 }
 
 export default env;

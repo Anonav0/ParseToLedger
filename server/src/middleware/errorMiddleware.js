@@ -41,24 +41,33 @@ export function errorHandler(err, req, res, next) {
     });
   }
 
+  const isUnexpected = !err.statusCode || err.statusCode >= 500;
   const statusCode = err.statusCode || 500;
-  const message = err.message || "Something went wrong";
 
-  // Log the error on the server for debugging
-  console.error(`[ERROR] ${req.method} ${req.originalUrl} — ${message}`);
-  if (err.errors && Array.isArray(err.errors)) {
-    console.error(`[ERROR DETAILS] ${JSON.stringify(err.errors, null, 2)}`);
+  // Sanitize message for unexpected 500 errors in production
+  let clientMessage = err.message || "Something went wrong";
+  if (isUnexpected && process.env.NODE_ENV === "production") {
+    clientMessage =
+      "An unexpected server error occurred. Please try again later.";
   }
-  if (process.env.NODE_ENV !== "production" && !err.errors) {
+
+  // Log on the server (zero secrets logged)
+  console.error(
+    `[ERROR] ${req.method} ${req.originalUrl} ${statusCode} — ${err.message || clientMessage}`,
+  );
+  if (err.errors && Array.isArray(err.errors) && err.errors.length > 0) {
+    console.error(`[ERROR DETAILS] ${JSON.stringify(err.errors)}`);
+  }
+  if (isUnexpected && process.env.NODE_ENV !== "production") {
     console.error(err.stack);
   }
 
   const responseBody = {
     success: false,
-    message,
+    message: clientMessage,
   };
 
-  // Attach safe, structured field-level errors if present
+  // Attach structured field-level errors if present
   if (Array.isArray(err.errors) && err.errors.length > 0) {
     responseBody.errors = err.errors;
   }

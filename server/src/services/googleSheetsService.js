@@ -54,6 +54,28 @@ export function formatLineItemsCell(lineItems) {
     .join("\n");
 }
 
+const GOOGLE_API_TIMEOUT_MS = 25000;
+
+/**
+ * Wraps a promise with a timeout rejection to prevent hanging indefinitely.
+ */
+function withTimeout(promise, operationName) {
+  let timeoutId;
+  const timeoutPromise = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => {
+      const err = new Error(
+        `Google Sheets operation '${operationName}' timed out after 25 seconds`,
+      );
+      err.isTimeout = true;
+      reject(err);
+    }, GOOGLE_API_TIMEOUT_MS);
+  });
+
+  return Promise.race([promise, timeoutPromise]).finally(() => {
+    clearTimeout(timeoutId);
+  });
+}
+
 /**
  * Ensures the first row of the configured worksheet contains the expected 10 column headers.
  * Does not overwrite or duplicate headers if already present.
@@ -67,10 +89,13 @@ export async function ensureSheetHeaders(sheets, spreadsheetId, sheetName) {
 
   let existingHeaders = [];
   try {
-    const response = await sheets.spreadsheets.values.get({
-      spreadsheetId,
-      range,
-    });
+    const response = await withTimeout(
+      sheets.spreadsheets.values.get({
+        spreadsheetId,
+        range,
+      }),
+      "reading sheet headers",
+    );
     existingHeaders = response.data.values ? response.data.values[0] || [] : [];
   } catch (err) {
     handleGoogleApiError(err, "reading sheet headers");
@@ -90,14 +115,17 @@ export async function ensureSheetHeaders(sheets, spreadsheetId, sheetName) {
       `[GOOGLE SHEETS] Provisioning standard headers on '${sheetName}'...`,
     );
     try {
-      await sheets.spreadsheets.values.update({
-        spreadsheetId,
-        range,
-        valueInputOption: "USER_ENTERED",
-        requestBody: {
-          values: [SHEET_HEADERS],
-        },
-      });
+      await withTimeout(
+        sheets.spreadsheets.values.update({
+          spreadsheetId,
+          range,
+          valueInputOption: "USER_ENTERED",
+          requestBody: {
+            values: [SHEET_HEADERS],
+          },
+        }),
+        "provisioning sheet headers",
+      );
       console.log("[GOOGLE SHEETS] Header row created successfully");
     } catch (err) {
       handleGoogleApiError(err, "provisioning sheet headers");
@@ -150,15 +178,18 @@ export async function appendInvoice(invoice) {
   );
 
   try {
-    await sheets.spreadsheets.values.append({
-      spreadsheetId,
-      range: `'${sheetName}'!A:J`,
-      valueInputOption: "USER_ENTERED",
-      insertDataOption: "INSERT_ROWS",
-      requestBody: {
-        values: [row],
-      },
-    });
+    await withTimeout(
+      sheets.spreadsheets.values.append({
+        spreadsheetId,
+        range: `'${sheetName}'!A:J`,
+        valueInputOption: "USER_ENTERED",
+        insertDataOption: "INSERT_ROWS",
+        requestBody: {
+          values: [row],
+        },
+      }),
+      "appending invoice row",
+    );
 
     console.log("[GOOGLE SHEETS] Invoice row successfully appended");
     return {
@@ -185,6 +216,25 @@ function handleGoogleApiError(err, operation) {
 
   const status = err.code || err.status;
   const msg = err.message || "";
+
+  if (err.isTimeout || msg.includes("timed out") || msg.includes("ETIMEDOUT")) {
+    throw new GoogleSheetsSyncError(
+      "Google Sheets synchronization timed out. Please try again.",
+      502,
+    );
+  }
+
+  if (
+    status === 429 ||
+    msg.includes("RESOURCE_EXHAUSTED") ||
+    msg.includes("Quota exceeded") ||
+    msg.includes("Rate Limit")
+  ) {
+    throw new GoogleSheetsSyncError(
+      "Google Sheets API rate limit or quota exceeded. Please wait a moment and try again.",
+      502,
+    );
+  }
 
   if (
     status === 401 ||

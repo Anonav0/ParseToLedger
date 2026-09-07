@@ -47,11 +47,25 @@ export async function extractInvoiceData(text) {
     throw error;
   }
 
-  // 3. Call LLM with structured output schema
+  // 3. Call LLM with structured output schema and 30-second timeout
+  const LLM_REQUEST_TIMEOUT_MS = 30000;
   let responseText;
+
   try {
     const ai = new GoogleGenAI({ apiKey: env.LLM_API_KEY });
-    const response = await ai.models.generateContent({
+
+    let timeoutId;
+    const timeoutPromise = new Promise((_, reject) => {
+      timeoutId = setTimeout(() => {
+        const timeoutErr = new Error(
+          "AI service request timed out after 30 seconds",
+        );
+        timeoutErr.isTimeout = true;
+        reject(timeoutErr);
+      }, LLM_REQUEST_TIMEOUT_MS);
+    });
+
+    const generatePromise = ai.models.generateContent({
       model: env.LLM_MODEL || "gemini-2.5-flash",
       contents: text,
       config: {
@@ -62,8 +76,26 @@ export async function extractInvoiceData(text) {
       },
     });
 
+    let response;
+    try {
+      response = await Promise.race([generatePromise, timeoutPromise]);
+    } finally {
+      clearTimeout(timeoutId);
+    }
+
     responseText = response.text;
   } catch (err) {
+    if (err.isTimeout) {
+      console.error(
+        "[LLM SERVICE ERROR] AI generation timed out after 30 seconds",
+      );
+      const timeoutError = new Error(
+        "AI invoice extraction request timed out. Please try again.",
+      );
+      timeoutError.statusCode = 502;
+      throw timeoutError;
+    }
+
     // Sanitize and log technical error on backend
     console.error(`[LLM SERVICE ERROR] Extraction failed: ${err.message}`);
     const apiError = new Error(
