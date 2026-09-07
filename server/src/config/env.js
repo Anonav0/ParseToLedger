@@ -11,6 +11,7 @@ const env = {
   PORT: parseInt(process.env.PORT, 10) || 5000,
   CLIENT_URL: process.env.CLIENT_URL || "http://localhost:5173",
   NODE_ENV: process.env.NODE_ENV || "development",
+  MAX_FILE_SIZE_MB: parseInt(process.env.MAX_FILE_SIZE_MB, 10) || 10,
 };
 
 /**

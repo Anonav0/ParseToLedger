@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import env from "./config/env.js";
 import healthRoutes from "./routes/healthRoutes.js";
+import invoiceRoutes from "./routes/invoiceRoutes.js";
 import { notFoundHandler, errorHandler } from "./middleware/errorMiddleware.js";
 
 const app = express();
@@ -26,6 +27,7 @@ app.use(
 // ---------------------------------------------------------------------------
 
 app.use("/api", healthRoutes);
+app.use("/api", invoiceRoutes);
 
 // ---------------------------------------------------------------------------
 // Error handling (must be registered after routes)

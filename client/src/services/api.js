@@ -13,3 +13,29 @@ export async function checkHealth() {
 
   return response.json();
 }
+
+/**
+ * Upload a PDF invoice for processing.
+ * @param {File} file - The PDF file to upload.
+ * @returns {Promise<{success: boolean, message: string, file: object}>}
+ */
+export async function uploadInvoice(file) {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await fetch(`${API_URL}/api/invoices/process`, {
+    method: "POST",
+    body: formData,
+    // Do NOT set Content-Type — let the browser set the multipart boundary
+  });
+
+  const data = await response.json();
+
+  if (!response.ok || !data.success) {
+    throw new Error(
+      data.message || "Unable to upload the invoice. Please try again.",
+    );
+  }
+
+  return data;
+}

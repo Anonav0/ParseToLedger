@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { checkHealth } from "./services/api";
+import InvoiceUploader from "./components/InvoiceUploader";
 import "./App.css";
 
 function App() {
@@ -73,10 +74,13 @@ function App() {
             </button>
           )}
         </div>
+
+        {/* Show uploader only when backend is connected */}
+        {status === "connected" && <InvoiceUploader />}
       </main>
 
       <footer className="app-footer">
-        <p>Phase 1 — Project Foundation</p>
+        <p>Phase 2 — Invoice Upload</p>
       </footer>
     </div>
   );
