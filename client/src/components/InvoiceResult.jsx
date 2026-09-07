@@ -1,27 +1,59 @@
-/**
- * Formats a monetary number into a clean string with 2 decimals if present.
- */
-function formatAmount(val, currency = "") {
-  if (typeof val !== "number" || isNaN(val)) {
-    return "—";
-  }
-  const formatted = val.toLocaleString(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-  return currency ? `${currency} ${formatted}` : formatted;
-}
+import LineItemsTable from "./LineItemsTable";
+import TotalSummary from "./TotalSummary";
+import SyncStatus from "./SyncStatus";
 
 /**
- * Formats an ISO date-time string into a human-readable local timestamp.
+ * Formats a date string into "DD Mon YYYY" format gracefully.
  */
-function formatTimestamp(isoStr) {
-  if (!isoStr) return "";
+function formatInvoiceDate(dateStr) {
+  if (!dateStr) return "—";
   try {
-    const d = new Date(isoStr);
-    return d.toLocaleString();
+    // If format is YYYY-MM-DD
+    const parts = String(dateStr).trim().split("-");
+    if (parts.length === 3) {
+      const year = parseInt(parts[0], 10);
+      const month = parseInt(parts[1], 10) - 1;
+      const day = parseInt(parts[2], 10);
+      const d = new Date(Date.UTC(year, month, day));
+      if (!isNaN(d.getTime())) {
+        const months = [
+          "Jan",
+          "Feb",
+          "Mar",
+          "Apr",
+          "May",
+          "Jun",
+          "Jul",
+          "Aug",
+          "Sep",
+          "Oct",
+          "Nov",
+          "Dec",
+        ];
+        return `${String(day).padStart(2, "0")} ${months[month]} ${year}`;
+      }
+    }
+    const d = new Date(dateStr);
+    if (!isNaN(d.getTime())) {
+      const months = [
+        "Jan",
+        "Feb",
+        "Mar",
+        "Apr",
+        "May",
+        "Jun",
+        "Jul",
+        "Aug",
+        "Sep",
+        "Oct",
+        "Nov",
+        "Dec",
+      ];
+      return `${String(d.getDate()).padStart(2, "0")} ${months[d.getMonth()]} ${d.getFullYear()}`;
+    }
+    return dateStr;
   } catch {
-    return isoStr;
+    return dateStr;
   }
 }
 
@@ -40,133 +72,82 @@ function InvoiceResult({ invoice, sync, onReset }) {
   } = invoice;
 
   const isSynced = sync?.status === "success";
-  const isSyncFailed = sync?.status === "failed";
 
   return (
-    <div className="invoice-result-container">
+    <div
+      className="invoice-result-card"
+      role="region"
+      aria-label="Processed Invoice Result"
+    >
       {/* Workflow Status Checklist */}
       <div className="status-checklist">
         <div className="checklist-item done">
-          <span className="checklist-icon">✓</span>
+          <span className="checklist-icon" aria-hidden="true">
+            ✓
+          </span>
           <span className="checklist-text">Invoice processed</span>
         </div>
         <div className="checklist-item done">
-          <span className="checklist-icon">✓</span>
+          <span className="checklist-icon" aria-hidden="true">
+            ✓
+          </span>
           <span className="checklist-text">Invoice validated</span>
         </div>
         <div className={`checklist-item ${isSynced ? "done" : "failed"}`}>
-          <span className="checklist-icon">{isSynced ? "✓" : "⚠"}</span>
+          <span className="checklist-icon" aria-hidden="true">
+            {isSynced ? "✓" : "⚠"}
+          </span>
           <span className="checklist-text">
-            {isSynced ? "Synced to Google Sheets" : "Google Sheets Sync Failed"}
+            {isSynced ? "Synced to Google Sheets" : "Google Sheets sync failed"}
           </span>
         </div>
       </div>
 
       {/* Sync Status Banner */}
-      {isSynced && (
-        <div className="sync-status-banner success">
-          <span className="sync-icon">📊</span>
-          <span className="sync-text">
-            Appended to <strong>{sync.destination || "Google Sheets"}</strong>
-            {sync.processedAt && ` at ${formatTimestamp(sync.processedAt)}`}
-          </span>
-        </div>
-      )}
+      <SyncStatus sync={sync} />
 
-      {isSyncFailed && (
-        <div className="sync-status-banner warning">
-          <span className="sync-icon">⚠️</span>
-          <span className="sync-text">
-            Invoice was validated successfully, but could not be synchronized
-            with <strong>Google Sheets</strong>. Validated data is preserved
-            below.
-          </span>
-        </div>
-      )}
-
-      {/* Invoice Overview */}
-      <div className="invoice-metadata-grid">
-        <div className="metadata-item">
-          <span className="metadata-label">Vendor</span>
-          <span className="metadata-value vendor-name">{vendor || "—"}</span>
-        </div>
-        <div className="metadata-item">
-          <span className="metadata-label">Invoice #</span>
-          <span className="metadata-value">{invoiceNumber || "—"}</span>
-        </div>
-        <div className="metadata-item">
-          <span className="metadata-label">Invoice Date</span>
-          <span className="metadata-value">{invoiceDate || "—"}</span>
-        </div>
-        <div className="metadata-item">
-          <span className="metadata-label">Currency</span>
-          <span className="metadata-value">{currency || "—"}</span>
+      {/* Invoice Overview Grid */}
+      <div className="invoice-details-section">
+        <h3 className="section-heading">Invoice Details</h3>
+        <div className="invoice-metadata-grid">
+          <div className="metadata-item">
+            <span className="metadata-label">Vendor</span>
+            <span className="metadata-value vendor-name">{vendor || "—"}</span>
+          </div>
+          <div className="metadata-item">
+            <span className="metadata-label">Invoice Number</span>
+            <span className="metadata-value">{invoiceNumber || "—"}</span>
+          </div>
+          <div className="metadata-item">
+            <span className="metadata-label">Invoice Date</span>
+            <span className="metadata-value">
+              {formatInvoiceDate(invoiceDate)}
+            </span>
+          </div>
+          <div className="metadata-item">
+            <span className="metadata-label">Currency</span>
+            <span className="metadata-value">{currency || "—"}</span>
+          </div>
         </div>
       </div>
 
       {/* Line Items Table */}
-      <div className="line-items-section">
-        <h3 className="section-heading">Line Items</h3>
-        <div className="table-responsive">
-          <table className="line-items-table">
-            <thead>
-              <tr>
-                <th className="col-desc">Description</th>
-                <th className="col-qty">Quantity</th>
-                <th className="col-price">Unit Price</th>
-                <th className="col-amount">Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              {Array.isArray(lineItems) && lineItems.length > 0 ? (
-                lineItems.map((item, idx) => (
-                  <tr key={idx}>
-                    <td className="col-desc">{item.description || "—"}</td>
-                    <td className="col-qty">
-                      {item.quantity != null ? item.quantity : "—"}
-                    </td>
-                    <td className="col-price">
-                      {formatAmount(item.unitPrice, currency)}
-                    </td>
-                    <td className="col-amount">
-                      {formatAmount(item.amount, currency)}
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan="4" className="empty-items-cell">
-                    No line items found in this invoice
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <LineItemsTable lineItems={lineItems} currency={currency} />
 
       {/* Totals Breakdown */}
-      <div className="totals-section">
-        <div className="totals-row">
-          <span className="totals-label">Subtotal</span>
-          <span className="totals-value">
-            {formatAmount(subtotal, currency)}
-          </span>
-        </div>
-        <div className="totals-row">
-          <span className="totals-label">Tax</span>
-          <span className="totals-value">{formatAmount(tax, currency)}</span>
-        </div>
-        <div className="totals-row grand-total">
-          <span className="totals-label">Total Amount</span>
-          <span className="totals-value">
-            {formatAmount(totalAmount, currency)}
-          </span>
-        </div>
-      </div>
+      <TotalSummary
+        subtotal={subtotal}
+        tax={tax}
+        totalAmount={totalAmount}
+        currency={currency}
+      />
 
-      {/* Reset / New Upload */}
-      <button className="upload-btn secondary" onClick={onReset}>
+      {/* Process Another Action */}
+      <button
+        type="button"
+        className="upload-btn secondary reset-btn"
+        onClick={onReset}
+      >
         Process Another Invoice
       </button>
     </div>
