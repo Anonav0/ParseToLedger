@@ -12,23 +12,18 @@ const env = {
   CLIENT_URL: process.env.CLIENT_URL || "http://localhost:5173",
   NODE_ENV: process.env.NODE_ENV || "development",
   MAX_FILE_SIZE_MB: parseInt(process.env.MAX_FILE_SIZE_MB, 10) || 10,
+  LLM_API_KEY: process.env.LLM_API_KEY || "",
+  LLM_MODEL: process.env.LLM_MODEL || "gemini-2.5-flash",
 };
 
 /**
  * Validate that required environment variables are present.
- * In Phase 1 there are no strictly required secrets, but this
- * function will be extended in later phases (e.g. LLM key, Google creds).
  */
 export function validateEnv() {
-  const missing = [];
-
-  // No required vars in Phase 1 — placeholder for future phases
-  // Example: if (!process.env.LLM_API_KEY) missing.push('LLM_API_KEY');
-
-  if (missing.length > 0) {
-    throw new Error(
-      `Missing required environment variables: ${missing.join(", ")}. ` +
-        "See .env.example for the required configuration.",
+  if (!env.LLM_API_KEY) {
+    console.warn(
+      "[CONFIG WARNING] LLM_API_KEY is not configured in server/.env. " +
+        "AI invoice extraction will fail with a configuration error until set.",
     );
   }
 }

@@ -1,20 +1,18 @@
 import { extractTextFromPdf } from "../services/pdfService.js";
+import { extractInvoiceData } from "../services/invoiceExtractionService.js";
 
 /**
- * Invoice controller — Phase 3.
+ * Invoice controller — Phase 4.
  *
- * Handles the uploaded PDF: validates, extracts raw text, and returns it.
- * AI invoice extraction and accounting sync will be added in later phases.
+ * Coordinates the full pipeline:
+ * 1. Receives and validates uploaded PDF file.
+ * 2. Extracts raw text via pdfService.
+ * 3. Extracts structured accounting data via invoiceExtractionService (LLM).
+ * 4. Returns structured invoice JSON.
  */
 
 /**
  * POST /api/invoices/process
- *
- * 1. Confirm a file was provided.
- * 2. Validate PDF magic bytes (%PDF-) from the buffer.
- * 3. Extract text from the PDF using pdfService.
- * 4. Validate that meaningful text was extracted.
- * 5. Return success response with file metadata and extracted text.
  */
 export async function processInvoice(req, res, next) {
   try {
@@ -25,7 +23,7 @@ export async function processInvoice(req, res, next) {
       return next(error);
     }
 
-    // 2. Validate PDF magic bytes from the actual buffer
+    // 2. Validate PDF magic bytes (%PDF-) from the buffer
     const buffer = req.file.buffer;
     if (!buffer || buffer.length < 5) {
       const error = new Error(
@@ -44,7 +42,7 @@ export async function processInvoice(req, res, next) {
 
     // 3. Extract raw text from the PDF buffer
     console.log(
-      `[INVOICE] Processing PDF: ${req.file.originalname} (${req.file.size} bytes)`,
+      `[INVOICE] Received: ${req.file.originalname} (${req.file.size} bytes)`,
     );
     const extractedText = await extractTextFromPdf(buffer);
 
@@ -56,17 +54,19 @@ export async function processInvoice(req, res, next) {
     }
 
     console.log(
-      `[INVOICE] Successfully extracted ${extractedText.length} characters from ${req.file.originalname}`,
+      `[INVOICE] PDF text extracted (${extractedText.length} characters)`,
     );
 
-    // 5. Return success with file metadata and extracted raw text
+    // 5. Send raw text to LLM for structured invoice extraction
+    console.log("[INVOICE] LLM extraction started");
+    const invoice = await extractInvoiceData(extractedText);
+    console.log("[INVOICE] LLM extraction completed");
+
+    // 6. Return structured invoice response
     res.status(200).json({
       success: true,
-      message: "Invoice text extracted successfully",
-      file: {
-        originalName: req.file.originalname,
-      },
-      text: extractedText,
+      message: "Invoice processed successfully",
+      invoice,
     });
   } catch (err) {
     next(err);

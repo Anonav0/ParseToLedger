@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { uploadInvoice } from "../services/api";
+import InvoiceResult from "./InvoiceResult";
 import "./InvoiceUploader.css";
 
 const MAX_FILE_SIZE_MB = 10;
@@ -17,6 +18,7 @@ function formatFileSize(bytes) {
 function InvoiceUploader() {
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploadState, setUploadState] = useState("idle"); // 'idle' | 'uploading' | 'success' | 'error'
+  const [loadingStage, setLoadingStage] = useState("");
   const [result, setResult] = useState(null);
   const [error, setError] = useState("");
   const fileInputRef = useRef(null);
@@ -55,6 +57,7 @@ function InvoiceUploader() {
     }
 
     setUploadState("uploading");
+    setLoadingStage("Analyzing invoice with AI…");
     setError("");
     setResult(null);
 
@@ -67,12 +70,15 @@ function InvoiceUploader() {
         err.message || "Unable to process the invoice. Please try again.",
       );
       setUploadState("error");
+    } finally {
+      setLoadingStage("");
     }
   }
 
   function handleReset() {
     setSelectedFile(null);
     setUploadState("idle");
+    setLoadingStage("");
     setResult(null);
     setError("");
     if (fileInputRef.current) {
@@ -82,7 +88,7 @@ function InvoiceUploader() {
 
   return (
     <div className="uploader-card">
-      <h2 className="uploader-title">Upload Invoice</h2>
+      <h2 className="uploader-title">Process Invoice</h2>
 
       {/* File picker */}
       <div className="file-input-area">
@@ -113,29 +119,24 @@ function InvoiceUploader() {
           disabled={!selectedFile || uploadState === "uploading"}
         >
           {uploadState === "uploading"
-            ? "Extracting invoice text…"
-            : "Upload & Extract Text"}
+            ? loadingStage || "Processing invoice…"
+            : "Upload & Process with AI"}
         </button>
       )}
 
-      {/* Success state */}
-      {uploadState === "success" && result && (
+      {/* Structured Invoice Result */}
+      {uploadState === "success" && result?.invoice && (
+        <InvoiceResult invoice={result.invoice} onReset={handleReset} />
+      )}
+
+      {/* Fallback Raw Text Result (if invoice object not present) */}
+      {uploadState === "success" && !result?.invoice && result?.text && (
         <div className="upload-result success">
           <p className="result-title">✓ {result.message}</p>
-          <div className="result-details">
-            <div className="result-row">
-              <span className="result-label">File</span>
-              <span className="result-value">{result.file?.originalName}</span>
-            </div>
+          <div className="extracted-text-section">
+            <h3 className="extracted-text-title">Invoice Text Extracted</h3>
+            <pre className="extracted-text-content">{result.text}</pre>
           </div>
-
-          {result.text && (
-            <div className="extracted-text-section">
-              <h3 className="extracted-text-title">Invoice Text Extracted</h3>
-              <pre className="extracted-text-content">{result.text}</pre>
-            </div>
-          )}
-
           <button className="upload-btn secondary" onClick={handleReset}>
             Upload Another Invoice
           </button>
