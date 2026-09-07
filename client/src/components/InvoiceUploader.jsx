@@ -64,7 +64,7 @@ function InvoiceUploader() {
       setUploadState("success");
     } catch (err) {
       setError(
-        err.message || "Unable to upload the invoice. Please try again.",
+        err.message || "Unable to process the invoice. Please try again.",
       );
       setUploadState("error");
     }
@@ -113,8 +113,8 @@ function InvoiceUploader() {
           disabled={!selectedFile || uploadState === "uploading"}
         >
           {uploadState === "uploading"
-            ? "Uploading invoice…"
-            : "Upload & Process"}
+            ? "Extracting invoice text…"
+            : "Upload & Extract Text"}
         </button>
       )}
 
@@ -125,19 +125,17 @@ function InvoiceUploader() {
           <div className="result-details">
             <div className="result-row">
               <span className="result-label">File</span>
-              <span className="result-value">{result.file.originalName}</span>
-            </div>
-            <div className="result-row">
-              <span className="result-label">Type</span>
-              <span className="result-value">{result.file.mimeType}</span>
-            </div>
-            <div className="result-row">
-              <span className="result-label">Size</span>
-              <span className="result-value">
-                {formatFileSize(result.file.size)}
-              </span>
+              <span className="result-value">{result.file?.originalName}</span>
             </div>
           </div>
+
+          {result.text && (
+            <div className="extracted-text-section">
+              <h3 className="extracted-text-title">Invoice Text Extracted</h3>
+              <pre className="extracted-text-content">{result.text}</pre>
+            </div>
+          )}
+
           <button className="upload-btn secondary" onClick={handleReset}>
             Upload Another Invoice
           </button>

@@ -1,8 +1,10 @@
+import { extractTextFromPdf } from "../services/pdfService.js";
+
 /**
- * Invoice controller — Phase 2.
+ * Invoice controller — Phase 3.
  *
- * Handles the uploaded PDF: validates and returns metadata.
- * PDF text extraction will be added in a later phase.
+ * Handles the uploaded PDF: validates, extracts raw text, and returns it.
+ * AI invoice extraction and accounting sync will be added in later phases.
  */
 
 /**
@@ -10,9 +12,11 @@
  *
  * 1. Confirm a file was provided.
  * 2. Validate PDF magic bytes (%PDF-) from the buffer.
- * 3. Return file metadata.
+ * 3. Extract text from the PDF using pdfService.
+ * 4. Validate that meaningful text was extracted.
+ * 5. Return success response with file metadata and extracted text.
  */
-export function processInvoice(req, res, next) {
+export async function processInvoice(req, res, next) {
   try {
     // 1. Check that a file was uploaded
     if (!req.file) {
@@ -38,19 +42,31 @@ export function processInvoice(req, res, next) {
       return next(error);
     }
 
-    // 3. Return success with file metadata
+    // 3. Extract raw text from the PDF buffer
     console.log(
-      `[INVOICE] Uploaded: ${req.file.originalname} (${req.file.size} bytes)`,
+      `[INVOICE] Processing PDF: ${req.file.originalname} (${req.file.size} bytes)`,
+    );
+    const extractedText = await extractTextFromPdf(buffer);
+
+    // 4. Validate that meaningful text was found
+    if (!extractedText || extractedText.length === 0) {
+      const error = new Error("No extractable text was found in the PDF");
+      error.statusCode = 422;
+      return next(error);
+    }
+
+    console.log(
+      `[INVOICE] Successfully extracted ${extractedText.length} characters from ${req.file.originalname}`,
     );
 
+    // 5. Return success with file metadata and extracted raw text
     res.status(200).json({
       success: true,
-      message: "Invoice uploaded successfully",
+      message: "Invoice text extracted successfully",
       file: {
         originalName: req.file.originalname,
-        mimeType: req.file.mimetype,
-        size: req.file.size,
       },
+      text: extractedText,
     });
   } catch (err) {
     next(err);
